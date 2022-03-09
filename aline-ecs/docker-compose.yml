@@ -1,0 +1,37 @@
+version: '3.7'
+services:
+  underwriter-microservice:
+    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-underwriter-microservice:latest
+    environment:
+      - APP_PORT=8001
+    ports:
+      - 8001:8001
+    env_file:
+      - ./var.env
+  
+  bank-microservice:
+    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-bank-microservice:latest
+    environment:
+      - APP_PORT=8002
+    ports:
+      - 8002:8002
+    env_file:
+      - ./var.env
+  
+  transaction-microservice:
+    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-transaction-microservice:latest
+    environment:
+      - APP_PORT=8003
+    ports:
+      - 8003:8003
+    env_file:
+      - ./var.env
+  
+  user-microservice:
+    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-user-microservice:latest
+    environment:
+      - APP_PORT=8004
+    ports:
+      - 8004:8004
+    env_file:
+      - ./var.env
