@@ -95,7 +95,7 @@ pipeline {
             steps {
                 script {
                     // Create var.env file containing environment variables
-                    def secretInfo = sh (script: 'aws secretsmanager get-secret-value --secret-id microservice-secrets --region us-east-1', returnStdout: true)
+                    def secretInfo = sh (script: 'aws secretsmanager get-secret-value --secret-id ${SECRET} --region ${SECRET_REGION}', returnStdout: true)
                     def slurper = new groovy.json.JsonSlurper()
                     def result = slurper.parseText(secretInfo)
                     def status = result.SecretString                    
