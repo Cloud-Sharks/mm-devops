@@ -3,11 +3,10 @@ deploy:
 	@envsubst < db-service.yml | kubectl apply -f -
 	@envsubst < configmap.yml | kubectl apply -f -
 	@envsubst < secret.yml | kubectl apply -f -
-	@cd microservices
-	@envsubst < bank.yml | kubectl apply -f -
-	@envsubst < transaction.yml | kubectl apply -f -
-	@envsubst < underwriter.yml | kubectl apply -f -
-	@envsubst < user.yml | kubectl apply -f -
+	@envsubst < microservices/bank.yml | kubectl apply -f -
+	@envsubst < microservices/transaction.yml | kubectl apply -f -
+	@envsubst < microservices/underwriter.yml | kubectl apply -f -
+	@envsubst < microservices/user.yml | kubectl apply -f -
 
 destroy:
 	@kubectl delete deployment user-deployment
