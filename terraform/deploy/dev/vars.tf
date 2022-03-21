@@ -1,6 +1,19 @@
-variable "AWS_REGION" {
-    default = "us-east-1"
-    description = "Region of the AWS account"
+variable "region" {
+  type = string
+  default = ""
+  description = "Region of the AWS account"
+}
+
+variable "environment" {
+  type = string
+  default = ""
+  description = "Environment"
+}
+
+variable "owner" {
+  type = string
+  default = ""
+  description = "Owner of the environment"
 }
 
 variable "vpc_cidr" {
@@ -25,4 +38,15 @@ variable "azs" {
   type = list(string)
   default = []
   description = "Availability zones"
+}
+
+variable "bucket_name" {
+  type = string
+  default = ""
+  description = "Name of the S3 bucket"
+}
+
+variable "acl_value" {
+  default = "private"
+  description = "Name of the S3 bucket"
 }

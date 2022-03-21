@@ -1,0 +1,148 @@
+pipeline {
+    // Only 3 Jenkins builds are kept
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '3'))
+    }
+    agent any
+    tools {
+        maven 'Apache Maven 3.8.4'
+        jdk 'jdk-17.0.2'
+    }
+
+    environment {
+        AWS_ID = credentials('aws_account_id')
+    }
+    parameters {
+        string(name: 'REGION', defaultValue: 'us-east-1', description: 'Region of AWS account')
+        string(name: 'MICROSERVICE', defaultValue: 'bank', description: 'The microservice being run')
+        string(name: 'CLUSTER_NAME', defaultValue: 'mm-aline-eks-cluster', description: 'Name of the cluster')
+        string(name: 'BRANCH', defaultValue: 'feature', description: 'Branch')
+        string(name: 'VERSION', defaultValue: '1.21', description: 'Kubernetes version')
+    }
+
+    stages {
+        stage("Checkout") {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: "*/${params.BRANCH}"]], extensions: [], userRemoteConfigs: [[url: "https://github.com/Cloud-Sharks/mm-aline-${params.MICROSERVICE}-microservice.git"]]])
+                sh 'git submodule init'
+                sh 'git submodule update'
+            }
+        }
+
+        // Continuous Integeration:
+        // Compile and test the code
+        stage('Compiling') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage('Testing') {
+            steps {
+                sh 'mvn clean test'
+            }
+        }
+
+        // SonarQube
+        // Perform "mvn clean verfy" to ensure compiled classes are up-to-date so the Maven Surefire execution from "mvn sonar:sonar" includes the most recent modifications
+        stage('SonarQube analysis') {
+            steps {
+                withSonarQubeEnv('sq1') {
+                    sh 'mvn clean verify sonar:sonar'
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        
+        // Produce artifact from the code, ready to be deployed
+        stage('Packaging') {
+            steps {
+                sh 'mvn clean package -Dmaven.test.skip=true'
+            }
+        }
+
+        stage('Log-in to ECR registry and Docker') {
+            steps {
+                sh "aws ecr get-login-password --region ${params.REGION} | docker login --username AWS --password-stdin ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com"
+            }
+        }
+        stage('Building Image') {
+            steps {
+                sh "docker build -t mm-${params.MICROSERVICE}-microservice:latest . "
+            }
+        }
+
+        // Deploy the artifact to the server
+        stage('Deploying') {
+            steps {
+                script {
+                    env.tag = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true)
+                }
+                
+                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+
+                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}" 
+                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+            }
+        }
+
+        stage('Get cluster status') {
+            steps {
+                script {
+                    try {
+                        def clusterInfo = sh (script: "aws eks describe-cluster --name ${params.CLUSTER_NAME}", returnStdout: true)
+                        def slurper = new groovy.json.JsonSlurper()
+                        def result = slurper.parseText(clusterInfo)["cluster"]["status"]
+                        
+                        if(result == 'ACTIVE') {
+                            env.cluster_status = 'ACTIVE'
+                        }
+                    } catch (Exception e) {
+                        echo "Cluster doesn't exist."
+                        env.cluster_status = 'MISSING'
+                    }
+                }
+            }
+        }
+        
+        stage('Creating EKS Cluster') {
+            when {
+                expression { env.cluster_status == 'MISSING' }
+            }
+            steps {
+                echo "Creating cluster. /"
+            }
+        }
+        stage('Updating EKS Cluster') {
+            when {
+                expression { env.cluster_status == 'ACTIVE' }
+            }
+            steps {
+                echo "Updating service. /"
+                sh "aws eks --region ${params.REGION} update-kubeconfig --name ${params.CLUSTER_NAME}"
+                sh "kubectl set image deployment/${params.MICROSERVICE}-deployment ${params.MICROSERVICE}-microservice=${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+                echo "Deployment updated and now rolling."
+                sh "kubectl rollout status -w deployment/${params.MICROSERVICE}-deployment"
+
+                // sh "kubectl rollout restart deployment/${params.MICROSERVICE}-deployment"
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+        cleanup {
+            sh "docker context use default"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+        }
+    }
+}

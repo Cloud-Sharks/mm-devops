@@ -1,37 +1,52 @@
 version: '3.7'
 services:
   underwriter-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-underwriter-microservice:latest
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-underwriter-microservice:${TAG}
     environment:
-      - APP_PORT=8001
+      - APP_PORT=${UNDERWRITER_PORT}
     ports:
-      - 8001:8001
+      - ${UNDERWRITER_PORT}:${UNDERWRITER_PORT}
     env_file:
       - ./var.env
   
   bank-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-bank-microservice:latest
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-bank-microservice:${TAG}
     environment:
-      - APP_PORT=8002
+      - APP_PORT=${BANK_PORT}
     ports:
-      - 8002:8002
+      - ${BANK_PORT}:${BANK_PORT}
     env_file:
       - ./var.env
   
   transaction-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-transaction-microservice:latest
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-transaction-microservice:${TAG}
     environment:
-      - APP_PORT=8003
+      - APP_PORT=${TRANSACTION_PORT}
     ports:
-      - 8003:8003
+      - ${TRANSACTION_PORT}:${TRANSACTION_PORT}
     env_file:
       - ./var.env
   
   user-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-user-microservice:latest
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-user-microservice:${TAG}
     environment:
-      - APP_PORT=8004
+      - APP_PORT=${USER_PORT}
     ports:
-      - 8004:8004
+      - ${USER_PORT}:${USER_PORT}
     env_file:
       - ./var.env
+
+x-aws-cloudformation:
+  Resources:
+    BankmicroserviceService:
+      Properties:
+        ServiceName: bank-microservice
+    TransactionmicroserviceService:
+      Properties:
+        ServiceName: transaction-microservice
+    UsermicroserviceService:
+      Properties:
+        ServiceName: user-microservice
+    UnderwritermicroserviceService:
+      Properties:
+        ServiceName: underwriter-microservice
