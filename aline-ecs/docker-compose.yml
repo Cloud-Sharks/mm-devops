@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   underwriter-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-underwriter-microservice:${TAG}
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-underwriter-microservice:${TAG}
     environment:
       - APP_PORT=${UNDERWRITER_PORT}
     ports:
@@ -10,7 +10,7 @@ services:
       - ./var.env
   
   bank-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-bank-microservice:${TAG}
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-bank-microservice:${TAG}
     environment:
       - APP_PORT=${BANK_PORT}
     ports:
@@ -19,7 +19,7 @@ services:
       - ./var.env
   
   transaction-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-transaction-microservice:${TAG}
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-transaction-microservice:${TAG}
     environment:
       - APP_PORT=${TRANSACTION_PORT}
     ports:
@@ -28,7 +28,7 @@ services:
       - ./var.env
   
   user-microservice:
-    image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-user-microservice:${TAG}
+    image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-user-microservice:${TAG}
     environment:
       - APP_PORT=${USER_PORT}
     ports:
