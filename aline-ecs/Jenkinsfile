@@ -124,7 +124,7 @@ pipeline {
                     def result = slurper.parseText(clusterInfo)
                     
                     def status = result.clusters[0]
-                    if(status == null){
+                    if(status == null || status["status"] == "INACTIVE"){
                         env.cluster_status = 'MISSING'
                     }
                     else {
