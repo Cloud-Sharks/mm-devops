@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: user-microservice
-          image: ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/mm-user-microservice:latest
+          image: ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/mm-user-microservice:latest
           resources:
             requests:
               memory: 64Mi

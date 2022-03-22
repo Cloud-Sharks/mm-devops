@@ -1,0 +1,173 @@
+pipeline {
+    // Only 3 Jenkins builds are kept
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '3'))
+    }
+    agent any
+    tools {
+        maven 'Apache Maven 3.8.4'
+        jdk 'jdk-17.0.2'
+    }
+
+    environment {
+        AWS_ID = credentials('aws_account_id')
+    }
+    parameters {
+        string(name: 'REGION', defaultValue: 'us-east-1', description: 'Region of AWS account')
+        string(name: 'MICROSERVICE', defaultValue: 'bank', description: 'The microservice being run')
+        string(name: 'CLUSTER_NAME', defaultValue: 'mm-aline-ecs-cluster', description: 'Name of the cluster')
+        string(name: 'BRANCH', defaultValue: 'None', description: 'Branch')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: "*/${params.BRANCH}"]], extensions: [], userRemoteConfigs: [[url: "https://github.com/Cloud-Sharks/mm-aline-${params.MICROSERVICE}-microservice.git"]]])
+                sh 'git submodule init'
+                sh 'git submodule update'
+            }
+        }
+
+        // Continuous Integeration:
+        // Compile and test the code
+        stage('Compiling') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage('Testing') {
+            steps {
+                sh 'mvn clean test'
+            }
+        }
+
+        // SonarQube
+        // Perform "mvn clean verfy" to ensure compiled classes are up-to-date so the Maven Surefire execution from "mvn sonar:sonar" includes the most recent modifications
+        stage('SonarQube analysis') {
+            steps {
+                withSonarQubeEnv('sq1') {
+                    sh 'mvn clean verify sonar:sonar'
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        
+        // Produce artifact from the code, ready to be deployed
+        stage('Packaging') {
+            steps {
+                sh 'mvn clean package -Dmaven.test.skip=true'
+            }
+        }
+
+        stage('Log-in to ECR registry and Docker') {
+            steps {
+                sh "aws ecr get-login-password --region ${params.REGION} | docker login --username AWS --password-stdin ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com"
+            }
+        }
+        stage('Building Image') {
+            steps {
+                sh "docker build -t mm-${params.MICROSERVICE}-microservice:latest . "
+            }
+        }
+
+        // Deploy the artifact to the server
+        stage('Deploying') {
+            steps {
+                script {
+                    env.tag = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true)
+                }
+                
+                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+
+                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}" 
+                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+            }
+        }
+        
+        stage('Create .env files') {
+            steps {
+                script {
+                    // Create var.env file containing environment variables
+                    def secretInfo = sh (script: 'aws secretsmanager get-secret-value --secret-id ${SECRET} --region ${SECRET_REGION}', returnStdout: true)
+                    def slurper = new groovy.json.JsonSlurper()
+                    def result = slurper.parseText(secretInfo)
+                    def status = result.SecretString                    
+                    def temp = slurper.parseText(status)
+                    def env_txt = temp.collect{"${it.key}=${it.value}"}.join('\n')
+
+                    // Create .env file containing ports
+                    def ports = "{ \"UNDERWRITER_PORT\": 8001, \"BANK_PORT\": 8002, \"TRANSACTION_PORT\": 8003, \"USER_PORT\": 8004, \"TAG\": \"latest\", \"AWS_ID\": ${AWS_ID}, \"AWS_REGION\": \"${params.REGION}\" }"
+                    def port_results = slurper.parseText(ports)
+                    def ports_txt = port_results.collect{"${it.key}=${it.value}"}.join('\n')
+
+                    // Setting the variables to environment variables and using them to create files
+                    env.varenv = "$env_txt"
+                    env.portsenv = "$ports_txt"
+                }
+                writeFile(file: 'var.env', text: "$varenv")
+                writeFile(file: '.env', text: "$portsenv")
+            }
+        }
+
+        stage('Get cluster status') {
+            steps {
+                script {
+                    def clusterInfo = sh (script: "aws ecs describe-clusters --cluster ${params.CLUSTER_NAME}", returnStdout: true)
+                    def slurper = new groovy.json.JsonSlurper()
+                    def result = slurper.parseText(clusterInfo)
+                    
+                    def status = result.clusters[0]
+                    if(status == null || status["status"] == "INACTIVE"){
+                        env.cluster_status = 'MISSING'
+                    }
+                    else {
+                        env.cluster_status = 'ACTIVE'
+                    }
+                }
+            }
+        }
+
+        stage('Creating ECS Cluster') {
+            when {
+                expression { env.cluster_status == 'MISSING' }
+            }
+            steps {
+                echo "Creating cluster. /"
+                sh 'docker context use aline-ecs-context'
+                echo "Switched context to ECS context."
+                sh "docker compose -f docker-compose.yml --project-name ${params.CLUSTER_NAME} up"
+                echo "Created cluster successfully!"
+            }
+        }
+        stage('Updating ECS Cluster') {
+            when {
+                expression { env.cluster_status == 'ACTIVE' }
+            }
+            steps {
+                echo "Updating service. /"
+                sh "aws ecs update-service --cluster ${params.CLUSTER_NAME} --service ${params.MICROSERVICE}-microservice --force-new-deployment"
+                echo "Updated service successfully!"
+            }
+        }
+        
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+        cleanup {
+            sh "docker context use default"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+            sh 'rm var.env && rm .env'
+        }
+    }
+}

@@ -25,3 +25,12 @@ the new Tasks.
 Each of the ports that are used in the Docker Compose definition is mapped to an IngressRule and a load balancer's Listener. 
 A TargetGroup is also created per service to dispatch traffic (via the load balancer) to the matching containers. 
 IAM Roles are created and configured as TaskExecutionRoles which are assigned to each of the microservices, granting access to AWS resources. 
+
+Environment variables.
+Environment variables for each container are set using two .env files: .env and var.env
+    - .env is a default environment file that is set in the base of the project directory (Version supported: 1.28+). This sets default values and thus
+        can be used to set the PORTS each microservice uses. It sets environment variables for the host build
+        i.e. UNDERWRITER_PORT is set in the .env file
+    - var.env is an environment file that contains all other environment variables for the actual application. env_file can only set the environment variables
+        for the Docker container itself
+        i.e. DB_USERNAME is set in the var.env file
