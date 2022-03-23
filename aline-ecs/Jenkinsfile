@@ -11,18 +11,15 @@ pipeline {
 
     environment {
         AWS_ID = credentials('aws_account_id')
+        REGION = 'us-east-1'
+        MICROSERVICE = 'bank'
+        CLUSTER_NAME = 'mm-aline-ecs-cluster'
     }
-    parameters {
-        string(name: 'REGION', defaultValue: 'us-east-1', description: 'Region of AWS account')
-        string(name: 'MICROSERVICE', defaultValue: 'bank', description: 'The microservice being run')
-        string(name: 'CLUSTER_NAME', defaultValue: 'mm-aline-ecs-cluster', description: 'Name of the cluster')
-        string(name: 'BRANCH', defaultValue: 'None', description: 'Branch')
-    }
-
+    
     stages {
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: "*/${params.BRANCH}"]], extensions: [], userRemoteConfigs: [[url: "https://github.com/Cloud-Sharks/mm-aline-${params.MICROSERVICE}-microservice.git"]]])
+                checkout([$class: 'GitSCM', branches: [[name: "*/feature"]], extensions: [], userRemoteConfigs: [[url: "https://github.com/Cloud-Sharks/mm-aline-${MICROSERVICE}-microservice.git"]]])
                 sh 'git submodule init'
                 sh 'git submodule update'
             }
@@ -67,12 +64,12 @@ pipeline {
 
         stage('Log-in to ECR registry and Docker') {
             steps {
-                sh "aws ecr get-login-password --region ${params.REGION} | docker login --username AWS --password-stdin ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com"
+                sh "aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com"
             }
         }
         stage('Building Image') {
             steps {
-                sh "docker build -t mm-${params.MICROSERVICE}-microservice:latest . "
+                sh "docker build -t mm-${MICROSERVICE}-microservice:latest . "
             }
         }
 
@@ -83,11 +80,11 @@ pipeline {
                     env.tag = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true)
                 }
                 
-                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
-                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
+                sh "docker tag mm-${MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:latest"
+                sh "docker push ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:latest"
 
-                sh "docker tag mm-${params.MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}" 
-                sh "docker push ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+                sh "docker tag mm-${MICROSERVICE}-microservice:latest ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:${env.tag}" 
+                sh "docker push ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:${env.tag}"
             }
         }
         
@@ -103,7 +100,7 @@ pipeline {
                     def env_txt = temp.collect{"${it.key}=${it.value}"}.join('\n')
 
                     // Create .env file containing ports
-                    def ports = "{ \"UNDERWRITER_PORT\": 8001, \"BANK_PORT\": 8002, \"TRANSACTION_PORT\": 8003, \"USER_PORT\": 8004, \"TAG\": \"latest\", \"AWS_ID\": ${AWS_ID}, \"AWS_REGION\": \"${params.REGION}\" }"
+                    def ports = "{ \"UNDERWRITER_PORT\": 8001, \"BANK_PORT\": 8002, \"TRANSACTION_PORT\": 8003, \"USER_PORT\": 8004, \"TAG\": \"latest\", \"AWS_ID\": ${AWS_ID}, \"AWS_REGION\": \"${REGION}\" }"
                     def port_results = slurper.parseText(ports)
                     def ports_txt = port_results.collect{"${it.key}=${it.value}"}.join('\n')
 
@@ -119,7 +116,7 @@ pipeline {
         stage('Get cluster status') {
             steps {
                 script {
-                    def clusterInfo = sh (script: "aws ecs describe-clusters --cluster ${params.CLUSTER_NAME}", returnStdout: true)
+                    def clusterInfo = sh (script: "aws ecs describe-clusters --cluster ${CLUSTER_NAME}", returnStdout: true)
                     def slurper = new groovy.json.JsonSlurper()
                     def result = slurper.parseText(clusterInfo)
                     
@@ -142,7 +139,7 @@ pipeline {
                 echo "Creating cluster. /"
                 sh 'docker context use aline-ecs-context'
                 echo "Switched context to ECS context."
-                sh "docker compose -f docker-compose.yml --project-name ${params.CLUSTER_NAME} up"
+                sh "docker compose -f docker-compose.yml --project-name ${CLUSTER_NAME} up"
                 echo "Created cluster successfully!"
             }
         }
@@ -152,7 +149,7 @@ pipeline {
             }
             steps {
                 echo "Updating service. /"
-                sh "aws ecs update-service --cluster ${params.CLUSTER_NAME} --service ${params.MICROSERVICE}-microservice --force-new-deployment"
+                sh "aws ecs update-service --cluster ${CLUSTER_NAME} --service ${MICROSERVICE}-microservice --force-new-deployment"
                 echo "Updated service successfully!"
             }
         }
@@ -165,8 +162,8 @@ pipeline {
         }
         cleanup {
             sh "docker context use default"
-            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:latest"
-            sh "docker rmi ${AWS_ID}.dkr.ecr.${params.REGION}.amazonaws.com/mm-${params.MICROSERVICE}-microservice:${env.tag}"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:latest"
+            sh "docker rmi ${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:${env.tag}"
             sh 'rm var.env && rm .env'
         }
     }
