@@ -1,0 +1,43 @@
+pipeline {
+    // Only 3 Jenkins builds are kept
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '3'))
+    }
+    agent any
+    tools {
+        terraform 'Terraform 1.1.7'
+    }
+
+    environment {
+        AWS_ID = credentials('aws_account_id')
+        AWS_ACCESS_KEY = credentials('ACCESS_KEY')
+        AWS_SECRET_KEY = credentials('SECRET_KEY')
+        REGION = credentials('AWS_REGION')
+    }
+    
+    stages {
+        stage('Init') {
+            sh "cd deploy/dev"
+            sh "terraform init -no-color"
+        }
+
+        stage('Plan') {
+            withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
+            }
+            sh "terraform plan -no-color"
+        }
+
+        stage('Apply') {
+            sh "terraform apply -no-color"
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+        cleanup {
+        }
+    }
+}
