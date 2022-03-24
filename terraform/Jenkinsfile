@@ -21,7 +21,7 @@ pipeline {
                 // sh "ls -a"
                 dir("terraform/deploy/dev") {
                     sh "ls -a"
-                    "terraform init -no-color"
+                    sh "terraform init -no-color"
                 }
             }
         }
