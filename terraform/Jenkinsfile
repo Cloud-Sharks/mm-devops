@@ -26,6 +26,7 @@ pipeline {
 
         stage('Plan') {
             steps {
+                sh "ls -a"
                 withAWS(credentials: 'aws-credentials', region: "${REGION}") {
                     sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
                 }
