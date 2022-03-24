@@ -39,7 +39,7 @@ pipeline {
         stage('Apply') {
             steps {
                 dir("terraform/deploy/dev") {
-                    sh "terraform apply -no-color"
+                    sh "terraform apply -no-color -auto-approve"
                 }
             }
         }
