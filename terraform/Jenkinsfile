@@ -26,11 +26,11 @@ pipeline {
 
         stage('Plan') {
             steps {
-                sh "cd terraform/deploy/dev"
                 withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    sh "cd terraform/deploy/dev"
                     sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
                 }
-                sh "ls -a"
+                sh "cd terraform/deploy/dev && ls -a"
                 sh "terraform plan -no-color"
             }
         }
