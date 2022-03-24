@@ -17,19 +17,25 @@ pipeline {
     
     stages {
         stage('Init') {
-            sh "cd deploy/dev"
-            sh "terraform init -no-color"
+            steps {
+                sh "cd deploy/dev"
+                sh "terraform init -no-color"
+            }
         }
 
         stage('Plan') {
-            withAWS(credentials: 'aws-credentials', region: "${REGION}") {
-                sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
+            steps {
+                withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                    sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
+                }
+                sh "terraform plan -no-color"
             }
-            sh "terraform plan -no-color"
         }
 
         stage('Apply') {
-            sh "terraform apply -no-color"
+            steps {
+                sh "terraform apply -no-color"
+            }
         }
     }
 
