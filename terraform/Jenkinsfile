@@ -27,7 +27,7 @@ pipeline {
         stage('Plan') {
             steps {
                 withAWS(credentials: 'aws-credentials', region: "${REGION}") {
-                    sh "cd terraform/deploy/dev"
+                    sh "cd terraform/deploy/dev && ls -a"
                     sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
                 }
                 sh "cd terraform/deploy/dev && ls -a"
