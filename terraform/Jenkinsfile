@@ -19,8 +19,10 @@ pipeline {
         stage('Init') {
             steps {
                 // sh "ls -a"
-                sh "cd terraform/deploy/dev"
-                sh "terraform init -no-color"
+                dir("terraform/deploy/dev") {
+                    sh "ls -a"
+                    "terraform init -no-color"
+                }
             }
         }
 
