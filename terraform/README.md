@@ -35,3 +35,5 @@ How it works.
     the subnets public.
 
     A security group is created that allows SSH inbound connections. This security group is then attached to the overall VPC.
+
+    Necessary resource attribute references (such as id's) are saved and stored as secrets in AWS SecretsManager
