@@ -1,5 +1,5 @@
 deploy:
-	@envsubst < cluster.yml | eksctl create cluster -f -
+	# @envsubst < cluster.yml | eksctl create cluster -f -
 	@envsubst < db-service.yml | kubectl apply -f -
 	@envsubst < configmap.yml | kubectl apply -f -
 	@envsubst < secret.yml | kubectl apply -f -
@@ -9,7 +9,7 @@ deploy:
 	@envsubst < microservices/user.yml | kubectl apply -f -
 
 destroy:
-	@kubectl delete deployment user-deployment
-	@kubectl delete deployment bank-deployment
-	@kubectl delete deployment transaction-deployment
-	@kubectl delete deployment underwriter-deployment
+	@kubectl delete deployment user-deployment -n mm-aline
+	@kubectl delete deployment bank-deployment -n mm-aline
+	@kubectl delete deployment transaction-deployment -n mm-aline
+	@kubectl delete deployment underwriter-deployment -n mm-aline

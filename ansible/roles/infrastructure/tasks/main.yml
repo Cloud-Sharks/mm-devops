@@ -1,0 +1,210 @@
+# VPC
+- name: Create VPC
+  ec2_vpc_net:
+    name: "{{ vpc_name }}"
+    cidr_block: "{{ vpc_cidr }}"
+    region: "{{ region }}"
+    state: present
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  register: vpc
+
+# Public subnets
+- name: Create public subnet
+  ec2_vpc_subnet:
+   state: present
+   vpc_id: "{{ vpc.vpc.id }}"
+   region: "{{ region }}"
+   az: "{{ azs.0 }}"
+   cidr: "{{ subnet_cidr.0 }}"
+   aws_access_key: "{{ aws_access_key }}"
+   aws_secret_key: "{{ aws_secret_key }}"
+   map_public: yes
+   resource_tags:
+     Name: "{{ subnet_name.0 }}"
+  register: subnet_public_1
+
+- name: Create public subnet
+  ec2_vpc_subnet:
+   state: present
+   vpc_id: "{{ vpc.vpc.id }}"
+   region: "{{ region }}"
+   az: "{{ azs.1 }}"
+   cidr: "{{ subnet_cidr.1 }}"
+   aws_access_key: "{{ aws_access_key }}"
+   aws_secret_key: "{{ aws_secret_key }}"
+   map_public: yes
+   resource_tags:
+     Name: "{{ subnet_name.0 }}"
+  register: subnet_public_2
+
+# Private subnets
+- name: Create private subnet
+  ec2_vpc_subnet:
+   state: present
+   vpc_id: "{{ vpc.vpc.id }}"
+   region: "{{ region }}"
+   az: "{{ azs.0 }}"
+   cidr: "{{ subnet_cidr.2 }}"
+   aws_access_key: "{{ aws_access_key }}"
+   aws_secret_key: "{{ aws_secret_key }}"
+   map_public: no
+   resource_tags:
+     Name: "{{ subnet_name.1 }}"
+  register: subnet_private_1
+  
+- name: Create private subnet
+  ec2_vpc_subnet:
+   state: present
+   vpc_id: "{{ vpc.vpc.id }}"
+   region: "{{ region }}"
+   az: "{{ azs.1 }}"
+   cidr: "{{ subnet_cidr.3 }}"
+   aws_access_key: "{{ aws_access_key }}"
+   aws_secret_key: "{{ aws_secret_key }}"
+   map_public: no
+   resource_tags:
+     Name: "{{ subnet_name.1 }}"
+  register: subnet_private_2
+
+# EIP
+- name: Allocate a new elastic IP without associating it to anything
+  community.aws.ec2_eip:
+    state: present
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  register: eip_1
+
+- name: Allocate a new elastic IP without associating it to anything
+  community.aws.ec2_eip:
+    state: present
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+  register: eip_2
+
+# NAT Gateway
+- name: Create NAT gateway, if one doesn't already exist
+  amazon.aws.ec2_vpc_nat_gateway:
+    state: present
+    subnet_id: "{{ subnet_public_1.subnet.id }}"
+    allocation_id: "{{ eip_1.allocation_id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    if_exist_do_not_create: true
+    release_eip: true
+    resource_tags:
+      Name: "MM - Ansible NAT Gateway"
+  register: nat_gateway_1
+
+- name: Create NAT gateway, if one doesn't already exist 
+  amazon.aws.ec2_vpc_nat_gateway:
+    state: present
+    subnet_id: "{{ subnet_public_2.subnet.id }}"
+    allocation_id: "{{ eip_2.allocation_id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    if_exist_do_not_create: true
+    release_eip: true
+    resource_tags:
+      Name: "MM - Ansible NAT Gateway"
+  register: nat_gateway_2
+
+# Internet Gateway
+- name: Create Internet gateway 
+  amazon.aws.ec2_vpc_igw:
+    vpc_id: "{{ vpc.vpc.id }}"
+    state: present
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    resource_tags:
+      Name: "MM - Ansible IGW"
+  register: igw
+
+# VPC Peering Connection
+- name: Create local account VPC peering Connection
+  community.aws.ec2_vpc_peer:
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    vpc_id: "{{ vpc.vpc.id }}"
+    peer_vpc_id: "{{ rds_vpc }}"
+    peer_region: "{{ rds_region }}"
+    state: present
+    tags:
+      Name: "MM - Ansible Peering"
+  register: vpc_peer
+
+- name: Accept local VPC peering request
+  community.aws.ec2_vpc_peer:
+    region: "{{ rds_region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    peering_id: "{{ vpc_peer.peering_id }}"
+    state: accept
+  register: action_peer
+
+# Route tables
+- name: Set up public subnet route table
+  community.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags:
+      Name: Public
+    subnets:
+      - "{{ subnet_public_1.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: public_route_table_1
+
+- name: Set up public subnet route table
+  community.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags:
+      Name: Public
+    subnets:
+      - "{{ subnet_public_2.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: public_route_table_2
+
+- name: Set up private subnet route table
+  community.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags:
+      Name: Private
+    subnets:
+      - "{{ subnet_private_1.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ nat_gateway_1.nat_gateway_id }}"
+  register: private_route_table_1
+
+- name: Set up private subnet route table
+  community.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc.vpc.id }}"
+    region: "{{ region }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    tags:
+      Name: Private
+    subnets:
+      - "{{ subnet_private_2.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ nat_gateway_2.nat_gateway_id }}"
+  register: private_route_table_2
