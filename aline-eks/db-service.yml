@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: aline-db-service
+  namespace: mm-aline
   labels:
     app: aline-db
 spec:
