@@ -1,5 +1,4 @@
 pipeline {
-    // Only 3 Jenkins builds are kept
     options {
         buildDiscarder(logRotator(numToKeepStr: '3'))
     }
@@ -9,25 +8,23 @@ pipeline {
     }
 
     environment {
-        AWS_ID = credentials('aws_account_id')
-        AWS_ACCESS_KEY = credentials('ACCESS_KEY')
-        AWS_SECRET_KEY = credentials('SECRET_KEY')
+        AWS_ID = credentials('aws-credentials')
         REGION = credentials('AWS_REGION')
+        DIR = "terraform/deploy/dev"
     }
     
     stages {
         stage('Init') {
             steps {
-                dir("terraform/deploy/dev") {
-                    sh "ls -a"
+                dir("${DIR}") {
                     sh "terraform init -no-color"
                 }
             }
         }
-
+    
         stage('Plan') {
             steps {
-                dir("terraform/deploy/dev") {
+                dir("${DIR}") {
                     withAWS(credentials: 'aws-credentials', region: "${REGION}") {
                         sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
                     }
@@ -36,9 +33,11 @@ pipeline {
             }
         }
 
+        // Skip apply if no changes
+        
         stage('Apply') {
             steps {
-                dir("terraform/deploy/dev") {
+                dir("${DIR}") {
                     sh "terraform apply -no-color -auto-approve"
                 }
             }
