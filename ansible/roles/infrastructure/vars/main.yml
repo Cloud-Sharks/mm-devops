@@ -1,6 +1,6 @@
 #vars/main.yml
-aws_access_key: "AKIA4RPJVSM4L5TQOUJL"
-aws_secret_key: "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"
+aws_access_key: ""
+aws_secret_key: ""
 region: "us-east-2"
   
 # VPC
