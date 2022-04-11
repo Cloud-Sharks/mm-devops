@@ -1,0 +1,6 @@
+---
+- name: Create cloud infrastructure
+  hosts: all
+
+  roles: 
+    - infrastructure

@@ -37,17 +37,6 @@ module "security_groups" {
     vpc_id          = module.network.vpc_id
 }
 
-module "secret" {
-    providers = {
-        aws = aws.main
-    }
-
-    source      = "../../modules/secrets"
-    vpc_id      = module.network.vpc_id
-    public_ids  = module.network.public_ids
-    private_ids = module.network.private_ids
-}
-
 module "s3" {
     providers = {
         aws = aws.bucket_region

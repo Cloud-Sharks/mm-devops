@@ -1,0 +1,52 @@
+pipeline {
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '3'))
+    }
+    agent any
+    tools {
+        terraform 'Terraform 1.1.7'
+    }
+
+    environment {
+        AWS_ID = credentials('aws-credentials')
+        REGION = credentials('AWS_REGION')
+        DIR = "terraform/deploy/dev"
+    }
+    
+    stages {
+        stage('Init') {
+            steps {
+                dir("${DIR}") {
+                    sh "terraform init -no-color"
+                }
+            }
+        }
+    
+        stage('Plan') {
+            steps {
+                dir("${DIR}") {
+                    withAWS(credentials: 'aws-credentials', region: "${REGION}") {
+                        sh "aws s3 sync s3://mm-aline-s3/terraform/ . "
+                    }
+                    sh "terraform plan -no-color"
+                }
+            }
+        }
+
+        // Skip apply if no changes
+        
+        stage('Apply') {
+            steps {
+                dir("${DIR}") {
+                    sh "terraform apply -no-color -auto-approve"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished'
+        }
+    }
+}

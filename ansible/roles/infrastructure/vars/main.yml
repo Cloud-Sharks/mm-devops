@@ -1,0 +1,25 @@
+#vars/main.yml
+aws_access_key: ""
+aws_secret_key: ""
+region: "us-east-2"
+  
+# VPC
+vpc_cidr: 10.10.0.0/16
+vpc_name: "MM - Ansible VPC"
+
+# Subnet
+subnet_name: 
+- "MM - Ansible Public Subnet"
+- "MM - Ansible Private Subnet"
+
+subnet_cidr:
+- 10.10.0.0/24
+- 10.10.32.0/24
+- 10.10.64.0/24
+- 10.10.128.0/24
+azs:
+- us-east-2a
+- us-east-2b
+
+rds_vpc: "vpc-01795ddb79c0a8a07"
+rds_region: "us-east-1"

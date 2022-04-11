@@ -36,17 +36,38 @@ services:
     env_file:
       - ./var.env
 
+x-aws-vpc: ${VPC_ID}
 x-aws-cloudformation:
   Resources:
     BankmicroserviceService:
       Properties:
         ServiceName: bank-microservice
+        NetworkConfiguration: 
+          AwsvpcConfiguration:
+            Subnets:
+            - ${PRIVATE_SUBNET_1_ID}
+            - ${PRIVATE_SUBNET_2_ID}
     TransactionmicroserviceService:
       Properties:
         ServiceName: transaction-microservice
+        NetworkConfiguration: 
+          AwsvpcConfiguration:
+            Subnets:
+            - ${PRIVATE_SUBNET_1_ID}
+            - ${PRIVATE_SUBNET_2_ID}
     UsermicroserviceService:
       Properties:
         ServiceName: user-microservice
+        NetworkConfiguration: 
+          AwsvpcConfiguration:
+            Subnets:
+            - ${PRIVATE_SUBNET_1_ID}
+            - ${PRIVATE_SUBNET_2_ID}
     UnderwritermicroserviceService:
       Properties:
         ServiceName: underwriter-microservice
+        NetworkConfiguration: 
+          AwsvpcConfiguration:
+            Subnets:
+            - ${PRIVATE_SUBNET_1_ID}
+            - ${PRIVATE_SUBNET_2_ID}

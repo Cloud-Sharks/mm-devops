@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: aline-ingress
+  namespace: mm-aline
+  labels:
+    app: aline-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+
+spec:
+  rules:
+  - host: a7f2a336cbb114c05a2cc259aa6b3b92-1583215551.us-east-2.elb.amazonaws.com
+    http:
+      paths:
+        - path: /users
+          backend:
+            serviceName: user-service
+            servicePort: 8003
+        - path: /login
+          backend:
+            serviceName: user-service
+            servicePort: 8003
+        - path: /applications
+          backend:
+            serviceName: underwriter-service
+            servicePort: 8001
+        - path: /members
+          backend:
+            serviceName: bank-service
+            servicePort: 8002
+        - path: /branches
+          backend:
+            serviceName: bank-service
+            servicePort: 8002
+        - path: /banks
+          backend:
+            serviceName: bank-service
+            servicePort: 8002
+        - path: /transactions
+          backend:
+            serviceName: transaction-service
+            servicePort: 8004
