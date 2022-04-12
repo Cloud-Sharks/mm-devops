@@ -22,6 +22,6 @@ managedNodeGroups:
     desiredCapacity: 4
     instanceType: ${INSTANCE_TYPE}
     ssh:
-      publicKeyName: ~/.ssh/aline-us-east-2.pem
+      publicKeyName: ${PEM_PATH}
     labels: { role: worker }
     privateNetworking: true
