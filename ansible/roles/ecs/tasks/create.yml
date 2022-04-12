@@ -1,0 +1,48 @@
+- name: Switch to ECS context
+  shell: "docker context use aline-ecs-context"
+
+- name: Get list of objects.
+  amazon.aws.aws_s3:
+    mode: list
+    region: "us-east-1"
+    bucket: mm-aline-s3
+    prefix: aline-s3/aline-ecs/
+  register: s3_bucket_items
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: temp
+    state: directory
+    mode: '777'
+
+- name: Download items
+  amazon.aws.aws_s3:
+    mode: get
+    region: "us-east-1"
+    bucket: mm-aline-s3
+    object: "{{ item }}"
+    dest: "temp/{{ item|basename }}"
+  ignore_errors: yes
+  with_items:
+    - "{{ s3_bucket_items.s3_keys }}"
+
+- name: .env file
+  shell: "envsubst < temp.env > var.env"
+  environment: "{{ data }}"
+  args:
+    chdir: temp
+
+- name: Login
+  shell: "aws ecr get-login-password --region ${AWS_ECR_REGION} | docker login --username AWS --password-stdin ${AWS_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com"
+  environment: "{{ data }}"
+
+- name: Launch
+  shell: "docker compose --project-name {{ cluster_name }} up "
+  environment: "{{ data }}"
+  args:
+    chdir: temp
+
+- name: Delete directory
+  ansible.builtin.file:
+    path: temp
+    state: absent
