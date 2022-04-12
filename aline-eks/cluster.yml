@@ -21,7 +21,5 @@ managedNodeGroups:
     maxSize: 5
     desiredCapacity: 4
     instanceType: ${INSTANCE_TYPE}
-    ssh:
-      publicKeyPath: ${PEM_PATH}
     labels: { role: worker }
     privateNetworking: true
