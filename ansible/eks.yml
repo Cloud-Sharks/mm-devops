@@ -1,0 +1,7 @@
+---
+- name: Configure and deploy EKS cluster
+  hosts: all
+  pre_tasks:
+    - shell: echo "Will apply common role"
+  roles:
+    - eks
