@@ -4,8 +4,6 @@ This is an Ansible collection that currently provisions base infrastructure for 
 Day 0 architecture such as: VPCs, subnets, gateways, etc.
 
 Future plans:
-- Going forward, I'm refactoring my playbook to primarily deploy and configure my microservice clusters, with Terraform handling the
-static infrastructure. 
 - Integrating Ansible with Jenkins 
 
 How to run it:
@@ -28,3 +26,11 @@ Project organization:
     This project utilizes two of the Roles directories: tasks and vars.
     - The tasks/main.yml contains the main list of tasks to be executed by the role
     - The vars/main.yml contains the variables used for the role
+
+ansible.cfg:
+- Configuration file
+- Ansible searches for this file in this order: ANSIBLE_CONFIG > ansible.cfg (current directory) > ~/.ansible.cfg (home directory) > /etc/ansible/ansible.cfg
+- For the sake of this project and demonstration, the configuration file was generated and placed in the current directory. 
+- Note: if the file is in the current directory, there are risks to be associated with it. Namely, if the current directory is world-writable (files that can be
+    read, modified, and potentially compromised by any user on the system). then Ansible will completely ignore an ansible.cfg file in the current directory. 
+    Unless the path to the config file (in the current directory) was set in the ANSIBLE_CONFIG environment var.
