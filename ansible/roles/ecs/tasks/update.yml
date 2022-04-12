@@ -1,0 +1,7 @@
+- name: Update service
+  debug:
+    msg: "Update service here"
+
+# echo "Updating service. /"
+# sh "aws ecs update-service --cluster ${CLUSTER_NAME} --service ${MICROSERVICE}-microservice --force-new-deployment"
+# echo "Updated service successfully!"

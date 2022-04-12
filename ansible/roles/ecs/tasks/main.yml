@@ -1,0 +1,21 @@
+- name: Check cluster status
+  block: 
+    - name: Get cluster status
+      shell: "aws ecs describe-clusters --cluster {{ cluster_name }}"
+      register: json_response
+
+    - name: Set JSON object
+      set_fact:
+        myvar: "{{ json_response.stdout | from_json }}"
+
+    - name: 
+      set_fact:
+        status: "{{ myvar.clusters[0].status }}"
+
+    - name: Update cluster
+      import_tasks: update.yml
+      when: status == "ACTIVE"
+        
+  rescue: 
+    - name: Create cluster
+      import_tasks: create.yml

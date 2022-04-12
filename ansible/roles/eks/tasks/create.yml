@@ -1,0 +1,46 @@
+- name: Get list of objects.
+  amazon.aws.aws_s3:
+    mode: list
+    region: "us-east-1"
+    bucket: mm-aline-s3
+    prefix: aline-s3/aline-eks/
+  register: s3_bucket_items
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: temp
+    state: directory
+    mode: '777'
+
+- name: Download items
+  amazon.aws.aws_s3:
+    mode: get
+    region: "us-east-1"
+    bucket: mm-aline-s3
+    object: "{{ item }}"
+    dest: "temp/{{ item|basename }}"
+  with_items:
+    - "{{ s3_bucket_items.s3_keys }}"
+
+- name: Create cluster and nodegroup
+  command: "make cluster"
+  environment: "{{ clusterconfig }}"
+  args: 
+    chdir: temp
+
+- name: Create data
+  command: "make data"
+  environment: "{{ data }}"
+  args:
+    chdir: temp
+
+- name: Deploy services
+  command: "make services"
+  environment: "{{ services }}"
+  args:
+    chdir: temp
+
+- name: Delete directory
+  ansible.builtin.file:
+    path: temp
+    state: absent

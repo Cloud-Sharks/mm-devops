@@ -1,0 +1,18 @@
+- name: Check cluster status
+  block: 
+    - name: Get cluster status
+      shell: "aws eks describe-cluster --name {{ cluster_name }}"
+      register: json_response
+      failed_when: "'No cluster found' in json_response.stderr"
+
+    - name: Set JSON object
+      set_fact:
+        myvar: "{{ json_response.stdout | from_json }}"
+
+    - name: Update cluster
+      import_tasks: update.yml
+      when: myvar.cluster.status == "ACTIVE"
+        
+  rescue: 
+    - name: Create cluster
+      import_tasks: create.yml
