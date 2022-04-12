@@ -1,0 +1,8 @@
+- name: Update service
+  debug:
+    msg: "Update service here."
+
+# "aws eks --region ${REGION} update-kubeconfig --name ${CLUSTER_NAME}"
+# "kubectl set image deployment/${MICROSERVICE}-deployment ${MICROSERVICE}-microservice=${AWS_ID}.dkr.ecr.${REGION}.amazonaws.com/mm-${MICROSERVICE}-microservice:${env.tag}"
+# echo "Deployment updated and now rolling."
+# "kubectl rollout status -w deployment/${MICROSERVICE}-deployment"
