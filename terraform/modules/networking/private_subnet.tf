@@ -9,6 +9,8 @@ resource "aws_subnet" "subnet-private" {
 
     tags = {
         Name = "MM - Private subnet"
+        kubernetes.io/cluster/mm-eks-cluster = "owned"
+        kubernetes.io/role/internal-elb = "1"
     }
 }
 
