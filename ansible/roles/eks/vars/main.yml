@@ -4,7 +4,7 @@ azs_a: "us-east-2a"
 azs_b: "us-east-2b"
 instance_type: "t2.small"
 
-secret_contents: "{{ lookup('amazon.aws.aws_secret', 'network-config') }}"
+secret_contents: "{{ lookup('aws_secret', 'network-config') }}"
 clusterconfig: 
   VPC_ID: "{{ secret_contents.vpc_id }}"
   CLUSTER_NAME: "{{ cluster_name }}"
@@ -18,7 +18,7 @@ clusterconfig:
   INSTANCE_TYPE: "{{ instance_type }}"
   PEM_PATH: "~/.ssh/id_rsa.pub"
   
-secret_contents_data: "{{ lookup('amazon.aws.aws_secret', 'microservice-secrets', region='us-east-1') }}"
+secret_contents_data: "{{ lookup('aws_secret', 'microservice-secrets', region='us-east-1') }}"
 data:
   DB_ENDPOINT: "{{ secret_contents_data.DB_ENDPOINT }}"
   DB_HOST: "aline-db-service"
