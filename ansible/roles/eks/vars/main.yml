@@ -4,7 +4,7 @@ azs_a: "us-east-2a"
 azs_b: "us-east-2b"
 instance_type: "t2.small"
 
-secret_contents: "{{ lookup('aws_secret', 'network-config') }}"
+secret_contents: "{{ lookup('aws_secret', 'network-config', region='us-east-2') }}"
 clusterconfig: 
   VPC_ID: "{{ secret_contents.vpc_id }}"
   CLUSTER_NAME: "{{ cluster_name }}"
