@@ -1,5 +1,5 @@
 - name: Get list of objects.
-  amazon.aws.aws_s3:
+  aws_s3:
     mode: list
     region: "us-east-1"
     bucket: mm-aline-s3
@@ -7,13 +7,13 @@
   register: s3_bucket_items
 
 - name: Create a directory if it does not exist
-  ansible.builtin.file:
+  file:
     path: temp
     state: directory
-    mode: '777'
+    mode: 0755
 
 - name: Download items
-  amazon.aws.aws_s3:
+  aws_s3:
     mode: get
     region: "us-east-1"
     bucket: mm-aline-s3
@@ -41,6 +41,6 @@
     chdir: temp
 
 - name: Delete directory
-  ansible.builtin.file:
+  file:
     path: temp
     state: absent
