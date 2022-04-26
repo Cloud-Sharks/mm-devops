@@ -5,6 +5,7 @@
     bucket: mm-aline-s3
     prefix: aline-s3/aline-eks/
   register: s3_bucket_items
+  become: false
 
 - name: Create a directory if it does not exist
   file:
