@@ -23,23 +23,28 @@
   with_items:
     - "{{ s3_bucket_items.s3_keys }}"
 
+- name: test
+  command: ls -a
+  args:
+    chdir: temp/
+
 - name: Create cluster and nodegroup
   command: "make cluster"
   environment: "{{ clusterconfig }}"
   args: 
-    chdir: temp
+    chdir: temp/
 
-- name: Create data
-  command: "make data"
-  environment: "{{ data }}"
-  args:
-    chdir: temp
+# - name: Create data
+#   command: "make data"
+#   environment: "{{ data }}"
+#   args:
+#     chdir: temp
 
-- name: Deploy services
-  command: "make services"
-  environment: "{{ services }}"
-  args:
-    chdir: temp
+# - name: Deploy services
+#   command: "make services"
+#   environment: "{{ services }}"
+#   args:
+#     chdir: temp
 
 - name: Delete directory
   file:
