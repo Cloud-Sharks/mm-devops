@@ -4,4 +4,4 @@
   pre_tasks:
     - shell: echo "Will apply common role"
   roles:
-    - eks
+    - { role: eks }
